@@ -118,7 +118,7 @@ Then build and start as usual:
 pnpm build && pnpm start
 ```
 
-Vercel users: add `OPENAI_API_TOKEN` and `OPENSEA_BEARER_TOKEN` in Project Settings → Environment Variables.
+Vercel users: add `OPENAI_API_KEY` and `OPENSEA_BEARER_TOKEN` in Project Settings → Environment Variables.
 
 ---
 
