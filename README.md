@@ -93,6 +93,31 @@ const result = streamText({
 
 ---
 
+## Architecture
+
+```mermaid
+sequenceDiagram
+  participant U as User (Browser)
+  participant C as Next.js Client (`src/app/page.tsx`)
+  participant API as API Route (`/api/chat`)
+  participant MCP as OpenSea MCP (SSE)
+  participant LLM as Model (OpenAI via AI SDK)
+
+  U->>C: Enter prompt / click example
+  C->>API: POST /api/chat (messages)
+  API->>MCP: Create MCP client (SSE) and fetch tools
+  API->>LLM: streamText(model, tools, messages)
+  LLM-->>MCP: Tool calls (as needed)
+  MCP-->>LLM: Tool responses
+  LLM-->>API: Streamed text + tool-call parts
+  API-->>C: UIMessage stream
+  C-->>U: Render messages + tool inspector
+```
+
+> Diagram rendered with Mermaid, which GitHub supports in Markdown. See "Creating diagrams" in GitHub Docs.
+
+---
+
 ## Example Prompts
 
 - Which NFT collections are trending in the last 24h?
