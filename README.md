@@ -1,5 +1,7 @@
 ## OpenSea MCP + AI SDK (Next.js) Sample
 
+![App screenshot](public/screenshot.png)
+
 This is a minimal Next.js app showing how to connect the OpenSea MCP server to the Vercel AI SDK to build an AI experience that can search, analyze, and act on OpenSea marketplace data.
 
 - **AI runtime**: Vercel AI SDK (`ai`, `@ai-sdk/react`, `@ai-sdk/openai`)
