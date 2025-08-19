@@ -1,5 +1,16 @@
 @import "tailwindcss";
 
+/* Optional shimmer effect (used for subtle loading indicators) */
+@keyframes shimmer {
+  0% { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
+}
+.shimmer {
+  background: linear-gradient(90deg, rgba(0,0,0,0.06) 25%, rgba(0,0,0,0.12) 50%, rgba(0,0,0,0.06) 75%);
+  background-size: 1000px 100%;
+  animation: shimmer 1.6s infinite linear;
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;

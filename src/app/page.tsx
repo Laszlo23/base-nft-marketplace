@@ -1,103 +1,227 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { useChat } from '@ai-sdk/react';
+import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls } from 'ai';
+import { useMemo, useState } from 'react';
+
+export default function Chat() {
+  const [input, setInput] = useState('');
+  const [expandedToolCalls, setExpandedToolCalls] = useState<Record<string, boolean>>({});
+
+  const { messages, sendMessage, status, error } = useChat({
+    transport: new DefaultChatTransport({ api: '/api/chat' }),
+    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
+  });
+
+  const lastAssistant = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === 'assistant') return messages[i];
+    }
+    return undefined;
+  }, [messages]);
+
+  const isReasoning = useMemo(() => {
+    if (!lastAssistant) return false;
+    return (
+      lastAssistant.parts?.some(part => part.type === 'reasoning') &&
+      (status === 'submitted' || status === 'streaming')
+    );
+  }, [lastAssistant, status]);
+
+  function toggleToolCall(id: string) {
+    setExpandedToolCalls(prev => ({ ...prev, [id]: !prev[id] }));
+  }
+
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <div className={`flex flex-col w-full ${messages.length === 0 ? 'max-w-5xl' : 'max-w-md'} py-24 mx-auto stretch`}>
+      {/* Zero state */}
+      {messages.length === 0 && (
+        <div className="mb-8">
+          <h1 className="text-2xl font-semibold text-center mb-6">OpenSea Assistant</h1>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-4">
+              <div className="text-sm font-semibold mb-3">Examples</div>
+              <div className="space-y-2">
+                {[
+                  'Which NFT collections are trending in the last 24h?',
+                  'Show top NFT collections by volume this week.',
+                  "What's the floor price and 24h volume for Pudgy Penguins?",
+                  'Find BAYC NFTs with gold traits.',
+                ].map(q => (
+                  <button
+                    key={q}
+                    type="button"
+                    className="w-full text-left text-sm px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                    onClick={() => sendMessage({ text: q })}
+                    disabled={status !== 'ready'}
+                  >
+                    {q}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-4">
+              <div className="text-sm font-semibold mb-3">Quick actions</div>
+              <div className="space-y-2">
+                {[
+                  'Show top tokens by 24h volume on Ethereum.',
+                  'Which tokens are trending on Base today?',
+                  'Search collections named "Bored Ape".',
+                  'Get a swap quote to trade 1 ETH to USDC on Ethereum.',
+                ].map(q => (
+                  <button
+                    key={q}
+                    type="button"
+                    className="w-full text-left text-sm px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                    onClick={() => sendMessage({ text: q })}
+                    disabled={status !== 'ready'}
+                  >
+                    {q}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-4">
+              <div className="text-sm font-semibold mb-3">Wallet & items</div>
+              <div className="space-y-2">
+                {[
+                  'Show NFT holdings for a wallet (you can ask me for the address).',
+                  'List token balances for a wallet.',
+                  'Get details for the BONK token.',
+                  'How active is the Doodles collection today?',
+                ].map(q => (
+                  <button
+                    key={q}
+                    type="button"
+                    className="w-full text-left text-sm px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                    onClick={() => sendMessage({ text: q })}
+                    disabled={status !== 'ready'}
+                  >
+                    {q}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      )}
+      {/* Messages */}
+      {messages.map(message => (
+        <div key={message.id} className="whitespace-pre-wrap text-sm leading-6 mb-4">
+          <div className="font-semibold mb-1">{message.role === 'user' ? 'User' : 'AI'}</div>
+          {message.parts.map((part, i) => {
+            const key = `${message.id}-${i}`;
+            switch (part.type) {
+              case 'text':
+                return (
+                  <div key={key} className="text-zinc-900 dark:text-zinc-100">
+                    {part.text}
+                  </div>
+                );
+              case 'reasoning':
+                // Do not show raw reasoning content; just an indicator elsewhere
+                return <div key={key} />;
+              default: {
+                // Handle tool parts generically (covers both dynamic-tool and tool-<name>)
+                const p: any = part as any;
+                if (p && (p.toolCallId != null || String(p.type || '').startsWith('tool-') || p.type === 'dynamic-tool')) {
+                  const callId: string = p.toolCallId ?? `${message.id}-${i}`;
+                  const expanded = expandedToolCalls[callId] ?? false;
+                  const toolName: string = p.toolName ?? String(p.type || '').replace(/^tool-/, '') ?? 'tool';
+                  const state = p.state as string | undefined;
+                  const stateLabel = state === 'input-streaming'
+                    ? 'Running'
+                    : state === 'input-available'
+                      ? 'Pending'
+                      : state === 'output-available'
+                        ? 'Done'
+                        : state === 'output-error'
+                          ? 'Error'
+                          : (state ?? '');
+
+                  return (
+                    <div key={key} className="border border-zinc-200 dark:border-zinc-800 rounded-md mt-2">
+                      <button
+                        type="button"
+                        onClick={() => toggleToolCall(callId)}
+                        className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                      >
+                        <span className="font-medium">Tool: {toolName}</span>
+                        <span className="text-xs text-zinc-500">{stateLabel}</span>
+                      </button>
+                      {expanded && (
+                        <div className="px-3 pb-3 space-y-2">
+                          {state && (
+                            <div className="text-xs text-zinc-500">State: {state}</div>
+                          )}
+                          {p.input != null && (
+                            <div>
+                              <div className="text-xs font-semibold mb-1">Input</div>
+                              <pre className="text-xs bg-zinc-50 dark:bg-zinc-900 p-2 rounded overflow-auto">
+{JSON.stringify(p.input, null, 2)}
+                              </pre>
+                            </div>
+                          )}
+                          {p.output != null && (
+                            <div>
+                              <div className="text-xs font-semibold mb-1">Output</div>
+                              <pre className="text-xs bg-zinc-50 dark:bg-zinc-900 p-2 rounded overflow-auto">
+{JSON.stringify(p.output, null, 2)}
+                              </pre>
+                            </div>
+                          )}
+                          {p.errorText && (
+                            <div>
+                              <div className="text-xs font-semibold mb-1">Error</div>
+                              <div className="text-xs text-red-600">{p.errorText}</div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+                return <div key={key} />;
+              }
+            }
+          })}
+        </div>
+      ))}
+
+      {/* Reasoning indicator */}
+      {isReasoning && (
+        <div className="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400 mb-3">
+          <div className="h-2 w-2 rounded-full bg-zinc-400 animate-pulse" />
+          <div className="rounded-md px-2 py-1 bg-zinc-100 dark:bg-zinc-900 shimmer">
+            Reasoning…
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div className="text-xs text-red-600 mb-2">Something went wrong.</div>
+      )}
+
+      {/* Spacer to prevent messages from being hidden behind the fixed input */}
+      <div className="h-28" />
+
+      <form
+        onSubmit={e => {
+          e.preventDefault();
+          if (input.trim()) {
+            sendMessage({ text: input });
+            setInput('');
+          }
+        }}
+      >
+        <input
+          className="fixed z-50 bg-white dark:bg-zinc-900 bottom-8 left-1/2 -translate-x-1/2 w-full max-w-md px-4 py-3 border border-zinc-300 dark:border-zinc-800 rounded-xl shadow-2xl"
+          value={input}
+          placeholder={status === 'ready' ? 'Say something…' : 'Thinking…'}
+          onChange={e => setInput(e.currentTarget.value)}
+          disabled={status !== 'ready'}
+        />
+      </form>
     </div>
   );
 }
