@@ -114,8 +114,6 @@ sequenceDiagram
   C-->>U: Render messages + tool inspector
 ```
 
-> Diagram rendered with Mermaid, which GitHub supports in Markdown. See "Creating diagrams" in GitHub Docs.
-
 ---
 
 ## Example Prompts
